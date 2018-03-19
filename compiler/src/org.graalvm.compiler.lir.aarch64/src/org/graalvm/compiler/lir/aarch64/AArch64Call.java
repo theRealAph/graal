@@ -201,11 +201,6 @@ public class AArch64Call {
         int before = masm.position();
         if (scratch != null) {
             if (GeneratePIC.getValue(crb.getOptions())) {
-                // We'll be going via the GOT, and the GOT should be in a 2G range.
-                // directCall(crb, masm, callTarget, null, state, label);
-                // masm.adrp(lr, 0);
-                // masm._add(64, lr, lr, 0);
-                // masm.blr(lr);
                 masm.bl(0);
             } else {
                 /*
@@ -242,10 +237,6 @@ public class AArch64Call {
         try (AArch64MacroAssembler.ScratchRegister scratch = masm.getScratchRegister()) {
             int before = masm.position();
             if (GeneratePIC.getValue(crb.getOptions())) {
-            //     // We'll be going via the GOT, and the GOT should be in a 2G range.
-                //     // directCall(crb, masm, callTarget, null, state, label);
-                //     masm.adrp(scratch.getRegister(), 0);
-                //     masm._add(64, scratch.getRegister(), scratch.getRegister(), 0);
                 masm.jmp();
             } else {
                 masm.movNativeAddress(scratch.getRegister(), 0L);
