@@ -171,17 +171,9 @@ public class AArch64Call {
 
         @Override
         protected void emitCall(CompilationResultBuilder crb, AArch64MacroAssembler masm) {
-            if (GeneratePIC.getValue(crb.getOptions())) {
-                // We'll be going via the GOT, and the GOT should be in a 2G range.
-                // directCall(crb, masm, callTarget, null, state, label);
-                masm.adrp(lr, 0);
-                masm._add(64, lr, lr, 0);
-                masm.blr(lr);
-            } else {
-                // We can use any scratch register we want, since we know that they have been saved
-                // before calling.
-                directCall(crb, masm, callTarget, r8, state, label);
-            }
+            // We can use any scratch register we want, since we know that they have been saved
+            // before calling.
+            directCall(crb, masm, callTarget, r8, state, label);
         }
     }
 
@@ -207,19 +199,22 @@ public class AArch64Call {
 
     public static void directCall(CompilationResultBuilder crb, AArch64MacroAssembler masm, InvokeTarget callTarget, Register scratch, LIRFrameState info, Label label) {
         int before = masm.position();
-        if (GeneratePIC.getValue(crb.getOptions())) {
-            // We'll be going via the GOT, and the GOT should be in a 2G range.
-            // directCall(crb, masm, callTarget, null, state, label);
-            masm.adrp(lr, 0);
-            masm._add(64, lr, lr, 0);
-            masm.blr(lr);
-        } else if (scratch != null) {
-            /*
-             * Offset might not fit into a 28-bit immediate, generate an indirect call with a 64-bit
-             * immediate address which is fixed up by HotSpot.
-             */
-            masm.movNativeAddress(scratch, 0L);
-            masm.blr(scratch);
+        if (scratch != null) {
+            if (GeneratePIC.getValue(crb.getOptions())) {
+                // We'll be going via the GOT, and the GOT should be in a 2G range.
+                // directCall(crb, masm, callTarget, null, state, label);
+                // masm.adrp(lr, 0);
+                // masm._add(64, lr, lr, 0);
+                // masm.blr(lr);
+                masm.bl(0);
+            } else {
+                /*
+                 * Offset might not fit into a 28-bit immediate, generate an indirect call with a 64-bit
+                 * immediate address which is fixed up by HotSpot.
+                 */
+                masm.movNativeAddress(scratch, 0L);
+                masm.blr(scratch);
+            }
         } else {
             // Address is fixed up by HotSpot.
             masm.bl(0);
@@ -247,14 +242,15 @@ public class AArch64Call {
         try (AArch64MacroAssembler.ScratchRegister scratch = masm.getScratchRegister()) {
             int before = masm.position();
             if (GeneratePIC.getValue(crb.getOptions())) {
-                // We'll be going via the GOT, and the GOT should be in a 2G range.
-                // directCall(crb, masm, callTarget, null, state, label);
-                masm.adrp(scratch.getRegister(), 0);
-                masm._add(64, scratch.getRegister(), scratch.getRegister(), 0);
+            //     // We'll be going via the GOT, and the GOT should be in a 2G range.
+                //     // directCall(crb, masm, callTarget, null, state, label);
+                //     masm.adrp(scratch.getRegister(), 0);
+                //     masm._add(64, scratch.getRegister(), scratch.getRegister(), 0);
+                masm.jmp();
             } else {
                 masm.movNativeAddress(scratch.getRegister(), 0L);
+                masm.jmp(scratch.getRegister());
             }
-            masm.jmp(scratch.getRegister());
             int after = masm.position();
             crb.recordDirectCall(before, after, callTarget, null);
             masm.ensureUniquePC();
