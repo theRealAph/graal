@@ -22,10 +22,12 @@
  */
 package org.graalvm.compiler.lir.aarch64;
 
+import static org.graalvm.compiler.core.common.GraalOptions.GeneratePIC;
 import static org.graalvm.compiler.lir.LIRInstruction.OperandFlag.ILLEGAL;
 import static org.graalvm.compiler.lir.LIRInstruction.OperandFlag.REG;
 import static org.graalvm.compiler.lir.LIRInstruction.OperandFlag.STACK;
 import static jdk.vm.ci.aarch64.AArch64.r8;
+import static jdk.vm.ci.aarch64.AArch64.lr;
 import static jdk.vm.ci.code.ValueUtil.asRegister;
 import static jdk.vm.ci.code.ValueUtil.isRegister;
 
@@ -169,9 +171,17 @@ public class AArch64Call {
 
         @Override
         protected void emitCall(CompilationResultBuilder crb, AArch64MacroAssembler masm) {
-            // We can use any scratch register we want, since we know that they have been saved
-            // before calling.
-            directCall(crb, masm, callTarget, r8, state, label);
+            if (GeneratePIC.getValue(crb.getOptions())) {
+                // We'll be going via the GOT, and the GOT should be in a 2G range.
+                // directCall(crb, masm, callTarget, null, state, label);
+                masm.adrp(lr, 0);
+                masm._add(64, lr, lr, 0);
+                masm.blr(lr);
+            } else {
+                // We can use any scratch register we want, since we know that they have been saved
+                // before calling.
+                directCall(crb, masm, callTarget, r8, state, label);
+            }
         }
     }
 
@@ -197,7 +207,13 @@ public class AArch64Call {
 
     public static void directCall(CompilationResultBuilder crb, AArch64MacroAssembler masm, InvokeTarget callTarget, Register scratch, LIRFrameState info, Label label) {
         int before = masm.position();
-        if (scratch != null) {
+        if (GeneratePIC.getValue(crb.getOptions())) {
+            // We'll be going via the GOT, and the GOT should be in a 2G range.
+            // directCall(crb, masm, callTarget, null, state, label);
+            masm.adrp(lr, 0);
+            masm._add(64, lr, lr, 0);
+            masm.blr(lr);
+        } else if (scratch != null) {
             /*
              * Offset might not fit into a 28-bit immediate, generate an indirect call with a 64-bit
              * immediate address which is fixed up by HotSpot.
@@ -230,7 +246,14 @@ public class AArch64Call {
     public static void directJmp(CompilationResultBuilder crb, AArch64MacroAssembler masm, InvokeTarget callTarget) {
         try (AArch64MacroAssembler.ScratchRegister scratch = masm.getScratchRegister()) {
             int before = masm.position();
-            masm.movNativeAddress(scratch.getRegister(), 0L);
+            if (GeneratePIC.getValue(crb.getOptions())) {
+                // We'll be going via the GOT, and the GOT should be in a 2G range.
+                // directCall(crb, masm, callTarget, null, state, label);
+                masm.adrp(scratch.getRegister(), 0);
+                masm._add(64, scratch.getRegister(), scratch.getRegister(), 0);
+            } else {
+                masm.movNativeAddress(scratch.getRegister(), 0L);
+            }
             masm.jmp(scratch.getRegister());
             int after = masm.position();
             crb.recordDirectCall(before, after, callTarget, null);

@@ -37,7 +37,6 @@ import static jdk.vm.ci.aarch64.AArch64.r9;
 import static jdk.vm.ci.aarch64.AArch64.sp;
 import static jdk.vm.ci.aarch64.AArch64.zr;
 
-import org.graalvm.compiler.asm.AbstractAddress;
 import org.graalvm.compiler.asm.Label;
 import org.graalvm.compiler.core.common.NumUtil;
 import org.graalvm.compiler.debug.GraalError;
@@ -277,7 +276,7 @@ public class AArch64MacroAssembler extends AArch64Assembler {
      * @param transferSize the memory transfer size in bytes. The log2 of this specifies how much
      *            the index register is scaled. Can be 1, 2, 4 or 8.
      */
-    public void loadAddress(Register dst, AArch64Address address, int transferSize) {
+    public void loadAddress(Register dst, AArch64Address address, int transferSize, boolean isPIC) {
         assert transferSize == 1 || transferSize == 2 || transferSize == 4 || transferSize == 8;
         assert dst.getRegisterCategory().equals(CPU);
         int shiftAmt = NumUtil.log2Ceil(transferSize);
@@ -306,15 +305,31 @@ public class AArch64MacroAssembler extends AArch64Assembler {
             case EXTENDED_REGISTER_OFFSET:
                 add(64, dst, address.getBase(), address.getOffset(), address.getExtendType(), address.isScaled() ? shiftAmt : 0);
                 break;
-            case PC_LITERAL:
-                super.adr(dst, address.getImmediateRaw());
+            case PC_LITERAL: {
+                if (address.isPIC()) {
+                    long pc = position();
+                    long offset = address.getImmediateRaw();
+                    long pc_page = pc >>> 12;
+                    long adr = pc + offset;
+                    long adr_page = adr >>> 12;
+                    long page_offset = adr_page - pc_page;
+                    super.adrp(dst, (int) (page_offset >>> 12));
+                    super._add(64, dst, dst, address.getImmediateRaw() & 0xfff);
+                } else {
+                    super.adr(dst, address.getImmediateRaw());
+                }
                 break;
+            }
             case BASE_REGISTER_ONLY:
                 movx(dst, address.getBase());
                 break;
             default:
                 throw GraalError.shouldNotReachHere();
         }
+    }
+
+    public void loadAddress(Register dst, AArch64Address address, int transferSize) {
+        loadAddress(dst, address, transferSize, false);
     }
 
     public void movx(Register dst, Register src) {
@@ -480,7 +495,14 @@ public class AArch64MacroAssembler extends AArch64Assembler {
      */
     @Override
     public void ldr(int srcSize, Register rt, AArch64Address address) {
-        super.ldr(srcSize, rt, address);
+        if (address.getAddressingMode() == AArch64Address.AddressingMode.PC_LITERAL && address.isPIC()) {
+            try (ScratchRegister sc1 = getScratchRegister()) {
+                adrp(sc1.getRegister(), 0);
+                super.ldr(srcSize, rt, AArch64Address.createScaledImmediateAddress(sc1.getRegister(), 0));
+            }
+        } else {
+            super.ldr(srcSize, rt, address);
+        }
     }
 
     /**
@@ -615,8 +637,7 @@ public class AArch64MacroAssembler extends AArch64Assembler {
 
     /**
      * dst = src + immediate.
-     *
-     * @param size register size. Has to be 32 or 64.
+     *  @param size register size. Has to be 32 or 64.
      * @param dst general purpose register. May not be null or zero-register.
      * @param src general purpose register. May not be null or zero-register.
      * @param immediate 32-bit signed int
@@ -628,11 +649,11 @@ public class AArch64MacroAssembler extends AArch64Assembler {
             sub(size, dst, src, -immediate);
         } else if (isAimm(immediate)) {
             if (!(dst.equals(src) && immediate == 0)) {
-                super.add(size, dst, src, immediate);
+                _add(size, dst, src, immediate);
             }
         } else if (immediate >= -(1 << 24) && immediate < (1 << 24)) {
-            super.add(size, dst, src, immediate & -(1 << 12));
-            super.add(size, dst, dst, immediate & ((1 << 12) - 1));
+            _add(size, dst, src, immediate & -(1 << 12));
+            _add(size, dst, dst, immediate & ((1 << 12) - 1));
         } else {
             assert !dst.equals(src);
             mov(dst, immediate);
@@ -1560,8 +1581,12 @@ public class AArch64MacroAssembler extends AArch64Assembler {
     }
 
     @Override
-    public AbstractAddress getPlaceholder(int instructionStartPosition) {
-        return AArch64Address.PLACEHOLDER;
+    public AArch64Address getPlaceholder(int instructionStartPosition) {
+        return AArch64Address.createPcLiteralAddress(instructionStartPosition - position());
+    }
+
+    public AArch64Address getPlaceholder(int instructionStartPosition, boolean immutablePIC) {
+        return getPlaceholder(instructionStartPosition).setPIC(immutablePIC);
     }
 
     /**

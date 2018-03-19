@@ -23,82 +23,7 @@
 package org.graalvm.compiler.asm.aarch64;
 
 import static jdk.vm.ci.aarch64.AArch64.cpuRegisters;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADD;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADDS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.AND;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ANDS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ASRV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BFM;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BIC;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BICS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BLR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BRK;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CLREX;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CLS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CLZ;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CSEL;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CSINC;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CSNEG;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.DMB;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.EON;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.EOR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.EXTR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FABS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FADD;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCCMP;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCMP;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCMPZERO;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCSEL;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCVTDS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCVTSD;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCVTZS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FDIV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMADD;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMOV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMSUB;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMUL;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FNEG;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FRINTZ;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FSQRT;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FSUB;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.HINT;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.HLT;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDAR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDAXR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDP;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDRS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDXR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LSLV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LSRV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MADD;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MOVK;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MOVN;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MOVZ;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MSUB;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ORN;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ORR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.RBIT;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.RET;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.REVW;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.REVX;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.RORV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SBFM;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SCVTF;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SDIV;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STLR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STLXR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STP;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STXR;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SUB;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SUBS;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.TBZ;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.TBNZ;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.UBFM;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.UDIV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.*;
 import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.InstructionType.FP32;
 import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.InstructionType.FP64;
 import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.InstructionType.General32;
@@ -1346,6 +1271,10 @@ public abstract class AArch64Assembler extends Assembler {
         emitInt(ADR.encoding | PcRelImmOp | rd(dst) | getPcRelativeImmEncoding(imm21), pos);
     }
 
+    public void adrp(Register dst, int pageOffset) {
+        emitInt(ADRP.encoding | PcRelImmOp | rd(dst) | getPcRelativeImmEncoding(pageOffset));
+    }
+
     private static int getPcRelativeImmEncoding(int imm21) {
         assert NumUtil.isSignedNbit(21, imm21);
         int imm = imm21 & NumUtil.getNbitNumberInt(21);
@@ -1362,15 +1291,26 @@ public abstract class AArch64Assembler extends Assembler {
      * dst = src + aimm.
      *
      * @param size register size. Has to be 32 or 64.
-     * @param dst general purpose register. May not be null or zero-register.
-     * @param src general purpose register. May not be null or zero-register.
+     * @param dst  general purpose register. May not be null or zero-register.
+     * @param src  general purpose register. May not be null or zero-register.
      * @param aimm arithmetic immediate. Either unsigned 12-bit value or unsigned 24-bit value with
-     *            the lower 12-bit cleared.
      */
-    protected void add(int size, Register dst, Register src, int aimm) {
+    public void _add(int size, Register dst, Register src, int aimm) {
         assert !dst.equals(zr);
         assert !src.equals(zr);
         addSubImmInstruction(ADD, dst, src, aimm, generalFromSize(size));
+    }
+
+    /**
+     * dst = src + aimm.
+     *
+     * @param size register size. Has to be 32 or 64.
+     * @param dst  general purpose register. May not be null or zero-register.
+     * @param src  general purpose register. May not be null or zero-register.
+     * @param aimm arithmetic immediate. Either unsigned 12-bit value or unsigned 24-bit value with
+     */
+    protected void add(int size, Register dst, Register src, int aimm) {
+        _add(size, dst, src, aimm);
     }
 
     /**
