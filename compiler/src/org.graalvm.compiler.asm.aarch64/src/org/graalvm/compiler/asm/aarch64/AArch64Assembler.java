@@ -1132,9 +1132,6 @@ public abstract class AArch64Assembler extends Assembler {
         int is32Bit = type.width == 32 ? 1 << ImmediateSizeOffset : 0;
         int isFloat = !type.isGeneral ? 1 << LoadStoreFpFlagOffset : 0;
         int memop = instr.encoding | transferSizeEncoding | is32Bit | isFloat | rt(reg);
-        if (isFloat != 0) {
-            System.err.print("");
-        }
         switch (address.getAddressingMode()) {
             case IMMEDIATE_SCALED:
                 emitInt(memop | LoadStoreScaledOp | address.getImmediate() << LoadStoreScaledImmOffset | rs1(address.getBase()));
@@ -1371,26 +1368,15 @@ public abstract class AArch64Assembler extends Assembler {
      * dst = src + aimm.
      *
      * @param size register size. Has to be 32 or 64.
-     * @param dst  general purpose register. May not be null or zero-register.
-     * @param src  general purpose register. May not be null or zero-register.
+     * @param dst general purpose register. May not be null or zero-register.
+     * @param src general purpose register. May not be null or zero-register.
      * @param aimm arithmetic immediate. Either unsigned 12-bit value or unsigned 24-bit value with
+     *            the lower 12-bit cleared.
      */
-    public void _add(int size, Register dst, Register src, int aimm) {
+    protected void add(int size, Register dst, Register src, int aimm) {
         assert !dst.equals(zr);
         assert !src.equals(zr);
         addSubImmInstruction(ADD, dst, src, aimm, generalFromSize(size));
-    }
-
-    /**
-     * dst = src + aimm.
-     *
-     * @param size register size. Has to be 32 or 64.
-     * @param dst  general purpose register. May not be null or zero-register.
-     * @param src  general purpose register. May not be null or zero-register.
-     * @param aimm arithmetic immediate. Either unsigned 12-bit value or unsigned 24-bit value with
-     */
-    protected void add(int size, Register dst, Register src, int aimm) {
-        _add(size, dst, src, aimm);
     }
 
     /**

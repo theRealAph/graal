@@ -631,11 +631,11 @@ public class AArch64MacroAssembler extends AArch64Assembler {
             sub(size, dst, src, -immediate);
         } else if (isAimm(immediate)) {
             if (!(dst.equals(src) && immediate == 0)) {
-                _add(size, dst, src, immediate);
+                super.add(size, dst, src, immediate);
             }
         } else if (immediate >= -(1 << 24) && immediate < (1 << 24)) {
-            _add(size, dst, src, immediate & -(1 << 12));
-            _add(size, dst, dst, immediate & ((1 << 12) - 1));
+            super.add(size, dst, src, immediate & -(1 << 12));
+            super.add(size, dst, dst, immediate & ((1 << 12) - 1));
         } else {
             assert !dst.equals(src);
             mov(dst, immediate);

@@ -121,12 +121,9 @@ public class AArch64HotSpotMove {
         private final CompressEncoding encoding;
         private final boolean nonNull;
 
-        @Def({REG, HINT})
-        protected AllocatableValue result;
-        @Use({REG})
-        protected AllocatableValue input;
-        @Alive({REG, ILLEGAL})
-        protected AllocatableValue baseRegister;
+        @Def({REG, HINT}) protected AllocatableValue result;
+        @Use({REG}) protected AllocatableValue input;
+        @Alive({REG, ILLEGAL}) protected AllocatableValue baseRegister;
 
         public CompressPointer(AllocatableValue result, AllocatableValue input, AllocatableValue baseRegister, CompressEncoding encoding, boolean nonNull) {
             super(TYPE);
@@ -175,12 +172,9 @@ public class AArch64HotSpotMove {
         private final CompressEncoding encoding;
         private final boolean nonNull;
 
-        @Def({REG})
-        protected AllocatableValue result;
-        @Use({REG})
-        protected AllocatableValue input;
-        @Alive({REG, ILLEGAL})
-        protected AllocatableValue baseRegister;
+        @Def({REG}) protected AllocatableValue result;
+        @Use({REG}) protected AllocatableValue input;
+        @Alive({REG, ILLEGAL}) protected AllocatableValue baseRegister;
 
         public UncompressPointer(AllocatableValue result, AllocatableValue input, AllocatableValue baseRegister, CompressEncoding encoding, boolean nonNull) {
             super(TYPE);
@@ -243,8 +237,7 @@ public class AArch64HotSpotMove {
             boolean pic = GeneratePIC.getValue(crb.getOptions());
             if (pic || encoding.hasBase() || encoding.getShift() != 0) {
                 if (pic) {
-                    masm.adrp(scratch);
-                    masm.add(64, scratch, scratch, 1);
+                    masm.addressOf(scratch);
                     masm.ldr(64, scratch, AArch64Address.createBaseRegisterOnlyAddress(scratch));
                     masm.add(64, result, scratch, ptr, AArch64Assembler.ExtendType.UXTX, encoding.getShift());
                     crb.recordMark(config.MARKID_NARROW_KLASS_BASE_ADDRESS);
