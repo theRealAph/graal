@@ -91,6 +91,17 @@ public final class AArch64Address extends AbstractAddress {
     private final AArch64Assembler.ExtendType extendType;
     private final AddressingMode addressingMode;
 
+    private boolean isPIC;
+
+    public AArch64Address setPIC(boolean isPIC) {
+        this.isPIC = isPIC;
+        return this;
+    }
+
+    public boolean isPIC() {
+        return isPIC;
+    }
+
     /**
      * General address generation mechanism. Accepted values for all parameters depend on the
      * addressingMode. Null is never accepted for a register, if an addressMode doesn't use a
