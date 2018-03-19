@@ -23,7 +23,83 @@
 package org.graalvm.compiler.asm.aarch64;
 
 import static jdk.vm.ci.aarch64.AArch64.cpuRegisters;
-import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.*;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADD;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADDS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ADRP;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.AND;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ANDS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ASRV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BFM;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BIC;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BICS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BLR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.BRK;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CLREX;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CLS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CLZ;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CSEL;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CSINC;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.CSNEG;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.DMB;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.EON;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.EOR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.EXTR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FABS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FADD;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCCMP;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCMP;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCMPZERO;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCSEL;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCVTDS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCVTSD;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FCVTZS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FDIV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMADD;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMOV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMSUB;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FMUL;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FNEG;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FRINTZ;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FSQRT;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.FSUB;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.HINT;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.HLT;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDAR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDAXR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDP;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDRS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LDXR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LSLV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.LSRV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MADD;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MOVK;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MOVN;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MOVZ;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.MSUB;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ORN;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.ORR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.RBIT;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.RET;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.REVW;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.REVX;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.RORV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SBFM;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SCVTF;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SDIV;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STLR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STLXR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STP;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.STXR;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SUB;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.SUBS;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.TBZ;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.TBNZ;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.UBFM;
+import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.Instruction.UDIV;
 import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.InstructionType.FP32;
 import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.InstructionType.FP64;
 import static org.graalvm.compiler.asm.aarch64.AArch64Assembler.InstructionType.General32;
@@ -1050,6 +1126,9 @@ public abstract class AArch64Assembler extends Assembler {
         int is32Bit = type.width == 32 ? 1 << ImmediateSizeOffset : 0;
         int isFloat = !type.isGeneral ? 1 << LoadStoreFpFlagOffset : 0;
         int memop = instr.encoding | transferSizeEncoding | is32Bit | isFloat | rt(reg);
+        if (isFloat != 0) {
+            System.err.print("");
+        }
         switch (address.getAddressingMode()) {
             case IMMEDIATE_SCALED:
                 emitInt(memop | LoadStoreScaledOp | address.getImmediate() << LoadStoreScaledImmOffset | rs1(address.getBase()));
@@ -1241,15 +1320,13 @@ public abstract class AArch64Assembler extends Assembler {
     /**
      * Address of page: sign extends 21-bit offset, shifts if left by 12 and adds it to the value of
      * the PC with its bottom 12-bits cleared, writing the result to dst.
+     * No offset is emiited; the instruction will be patched later.
      *
      * @param dst general purpose register. May not be null, zero-register or stackpointer.
-     * @param imm Signed 33-bit offset with lower 12bits clear.
      */
-    // protected void adrp(Register dst, long imm) {
-    // assert (imm & NumUtil.getNbitNumberInt(12)) == 0 : "Lower 12-bit of immediate must be zero.";
-    // assert NumUtil.isSignedNbit(33, imm);
-    // addressCalculationInstruction(dst, (int) (imm >>> 12), Instruction.ADRP);
-    // }
+    public void adrp(Register dst) {
+        emitInt(ADRP.encoding | PcRelImmOp | rd(dst) );
+    }
 
     /**
      * Adds a 21-bit signed offset to the program counter and writes the result to dst.
@@ -1261,12 +1338,15 @@ public abstract class AArch64Assembler extends Assembler {
         emitInt(ADR.encoding | PcRelImmOp | rd(dst) | getPcRelativeImmEncoding(imm21));
     }
 
+    /**
+     * Adds a 21-bit signed offset to the program counter and writes the result to dst.
+     *
+     * @param dst general purpose register. May not be null, zero-register or stackpointer.
+     * @param imm21 Signed 21-bit offset.
+     * @param pos the position in the code that the instruction is emitted.
+     */
     public void adr(Register dst, int imm21, int pos) {
         emitInt(ADR.encoding | PcRelImmOp | rd(dst) | getPcRelativeImmEncoding(imm21), pos);
-    }
-
-    public void adrp(Register dst, int pageOffset) {
-        emitInt(ADRP.encoding | PcRelImmOp | rd(dst) | getPcRelativeImmEncoding(pageOffset));
     }
 
     private static int getPcRelativeImmEncoding(int imm21) {

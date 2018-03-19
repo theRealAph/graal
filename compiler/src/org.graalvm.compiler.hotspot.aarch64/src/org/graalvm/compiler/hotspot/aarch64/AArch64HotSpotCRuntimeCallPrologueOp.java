@@ -43,16 +43,14 @@ public class AArch64HotSpotCRuntimeCallPrologueOp extends AArch64LIRInstruction 
 
     private final int threadLastJavaSpOffset;
     private final int threadLastJavaPcOffset;
-    private final int threadLastJavaFpOffset;
     private final Register thread;
     @Temp({REG}) protected AllocatableValue scratch;
     private final Label label;
 
-    public AArch64HotSpotCRuntimeCallPrologueOp(int threadLastJavaSpOffset, int threadLastJavaPcOffset, int threadLastJavaFpOffset, Register thread, AllocatableValue scratch, Label label) {
+    public AArch64HotSpotCRuntimeCallPrologueOp(int threadLastJavaSpOffset, int threadLastJavaPcOffset, Register thread, AllocatableValue scratch, Label label) {
         super(TYPE);
         this.threadLastJavaSpOffset = threadLastJavaSpOffset;
         this.threadLastJavaPcOffset = threadLastJavaPcOffset;
-        this.threadLastJavaFpOffset = threadLastJavaFpOffset;
         this.thread = thread;
         this.scratch = scratch;
         this.label = label;
@@ -69,7 +67,5 @@ public class AArch64HotSpotCRuntimeCallPrologueOp extends AArch64LIRInstruction 
         // Get the current PC. Use a label to patch the return address.
         masm.adr(scratchRegister, label);
         masm.str(64, scratchRegister, masm.makeAddress(thread, threadLastJavaPcOffset, 8));
-
-        masm.str(64, fp, masm.makeAddress(thread, threadLastJavaFpOffset, 8));
     }
 }

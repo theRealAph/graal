@@ -66,14 +66,9 @@ import org.graalvm.compiler.lir.StandardOp.SaveRegistersOp;
 import org.graalvm.compiler.lir.SwitchStrategy;
 import org.graalvm.compiler.lir.Variable;
 import org.graalvm.compiler.lir.VirtualStackSlot;
-import org.graalvm.compiler.lir.aarch64.AArch64AddressValue;
-import org.graalvm.compiler.lir.aarch64.AArch64CCall;
-import org.graalvm.compiler.lir.aarch64.AArch64Call;
+import org.graalvm.compiler.lir.aarch64.*;
 import org.graalvm.compiler.lir.aarch64.AArch64ControlFlow.StrategySwitchOp;
-import org.graalvm.compiler.lir.aarch64.AArch64FrameMapBuilder;
-import org.graalvm.compiler.lir.aarch64.AArch64Move;
 import org.graalvm.compiler.lir.aarch64.AArch64Move.StoreOp;
-import org.graalvm.compiler.lir.aarch64.AArch64PrefetchOp;
 import org.graalvm.compiler.lir.gen.LIRGenerationResult;
 
 import jdk.vm.ci.aarch64.AArch64;
@@ -92,6 +87,7 @@ import jdk.vm.ci.meta.JavaConstant;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.PlatformKind;
 import jdk.vm.ci.meta.Value;
+import org.graalvm.compiler.options.OptionValues;
 
 /**
  * LIR generator specialized for AArch64 HotSpot.
@@ -153,9 +149,47 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
         append(new AArch64CCall(nativeCallingConvention.getReturn(), ptr, argLocations));
     }
 
-    public SaveRegistersOp emitSaveAllRegisters() {
-        throw GraalError.unimplemented();
+    /**
+     * @param savedRegisters the registers saved by this operation which may be subject to pruning
+     * @param savedRegisterLocations the slots to which the registers are saved
+     * @param supportsRemove determines if registers can be pruned
+     */
+    protected AArch64SaveRegistersOp emitSaveRegisters(Register[] savedRegisters, AllocatableValue[] savedRegisterLocations, boolean supportsRemove) {
+        AArch64SaveRegistersOp save = new AArch64SaveRegistersOp(savedRegisters, savedRegisterLocations, supportsRemove);
+        append(save);
+        return save;
     }
+
+    /**
+     * Allocate a stack slot for saving a register.
+     */
+    protected VirtualStackSlot allocateSaveRegisterLocation(Register register) {
+        PlatformKind kind = target().arch.getLargestStorableKind(register.getRegisterCategory());
+        if (kind.getVectorLength() > 1) {
+            // we don't use vector registers, so there is no need to save them
+            kind = AArch64Kind.QWORD;
+        }
+        return getResult().getFrameMapBuilder().allocateSpillSlot(LIRKind.value(kind));
+    }
+
+    /**
+     * Adds a node to the graph that saves all allocatable registers to the stack.
+     *
+     * @param supportsRemove determines if registers can be pruned
+     * @return the register save node
+     */
+    private AArch64SaveRegistersOp emitSaveAllRegisters(Register[] savedRegisters, boolean supportsRemove) {
+        AllocatableValue[] savedRegisterLocations = new AllocatableValue[savedRegisters.length];
+        for (int i = 0; i < savedRegisters.length; i++) {
+            savedRegisterLocations[i] = allocateSaveRegisterLocation(savedRegisters[i]);
+        }
+        return emitSaveRegisters(savedRegisters, savedRegisterLocations, supportsRemove);
+    }
+
+    protected void emitRestoreRegisters(AArch64SaveRegistersOp save) {
+        append(new AArch64RestoreRegistersOp(save.getSlots().clone(), save));
+    }
+
 
     @Override
     public VirtualStackSlot getLockSlot(int lockDepth) {
@@ -207,6 +241,7 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
     @Override
     public Value emitCompress(Value pointer, CompressEncoding encoding, boolean nonNull) {
         LIRKind inputKind = pointer.getValueKind(LIRKind.class);
+        LIRKindTool lirKindTool = getLIRKindTool();
         assert inputKind.getPlatformKind() == AArch64Kind.QWORD;
         if (inputKind.isReference(0)) {
             // oop
@@ -217,8 +252,16 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
             // metaspace pointer
             Variable result = newVariable(LIRKind.value(AArch64Kind.DWORD));
             AllocatableValue base = Value.ILLEGAL;
-            if (encoding.hasBase()) {
-                base = emitLoadConstant(LIRKind.value(AArch64Kind.QWORD), JavaConstant.forLong(encoding.getBase()));
+            OptionValues options = getResult().getLIR().getOptions();
+            if (encoding.hasBase() || GeneratePIC.getValue(options)) {
+                if (GeneratePIC.getValue(options)) {
+                    Variable baseAddress = newVariable(lirKindTool.getWordKind());
+                    AArch64HotSpotMove.BaseMove move = new AArch64HotSpotMove.BaseMove(baseAddress, config);
+                    append(move);
+                    base = baseAddress;
+                } else {
+                    base = emitLoadConstant(LIRKind.value(AArch64Kind.QWORD), JavaConstant.forLong(encoding.getBase()));
+                }
             }
             append(new AArch64HotSpotMove.CompressPointer(result, asAllocatable(pointer), base, encoding, nonNull));
             return result;
@@ -238,8 +281,16 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
             // metaspace pointer
             Variable result = newVariable(LIRKind.value(AArch64Kind.QWORD));
             AllocatableValue base = Value.ILLEGAL;
-            if (encoding.hasBase()) {
-                base = emitLoadConstant(LIRKind.value(AArch64Kind.QWORD), JavaConstant.forLong(encoding.getBase()));
+            OptionValues options = getResult().getLIR().getOptions();
+            if (encoding.hasBase() || GeneratePIC.getValue(options)) {
+                if (GeneratePIC.getValue(options)) {
+                    Variable baseAddress = newVariable(LIRKind.value(AArch64Kind.QWORD));
+                    AArch64HotSpotMove.BaseMove move = new AArch64HotSpotMove.BaseMove(baseAddress, config);
+                    append(move);
+                    base = baseAddress;
+                } else {
+                    base = emitLoadConstant(LIRKind.value(AArch64Kind.QWORD), JavaConstant.forLong(encoding.getBase()));
+                }
             }
             append(new AArch64HotSpotMove.UncompressPointer(result, asAllocatable(pointer), base, encoding, nonNull));
             return result;
@@ -278,6 +329,17 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
     @Override
     public Variable emitForeignCall(ForeignCallLinkage linkage, LIRFrameState state, Value... args) {
         HotSpotForeignCallLinkage hotspotLinkage = (HotSpotForeignCallLinkage) linkage;
+        boolean destroysRegisters = hotspotLinkage.destroysRegisters();
+
+        AArch64SaveRegistersOp save = null;
+        Stub stub = getStub();
+        if (destroysRegisters) {
+            if (stub != null && stub.preservesRegisters()) {
+                Register[] savedRegisters = getRegisterConfig().getAllocatableRegisters().toArray();
+                save = emitSaveAllRegisters(savedRegisters, true);
+            }
+        }
+
         Variable result;
         LIRFrameState debugInfo = null;
         if (hotspotLinkage.needsDebugInfo()) {
@@ -285,7 +347,7 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
             assert debugInfo != null || getStub() != null;
         }
 
-        if (linkage.destroysRegisters() || hotspotLinkage.needsJavaFrameAnchor()) {
+        if (destroysRegisters || hotspotLinkage.needsJavaFrameAnchor()) {
             HotSpotRegistersProvider registers = getProviders().getRegisters();
             Register thread = registers.getThreadRegister();
             Variable scratch = newVariable(LIRKind.value(target().arch.getWordKind()));
@@ -293,14 +355,29 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
             // We need a label for the return address.
             label = new Label();
 
-            append(new AArch64HotSpotCRuntimeCallPrologueOp(config.threadLastJavaSpOffset(), config.threadLastJavaPcOffset(), config.threadLastJavaFpOffset(), thread, scratch, label));
+            append(new AArch64HotSpotCRuntimeCallPrologueOp(config.threadLastJavaSpOffset(), config.threadLastJavaPcOffset(), thread, scratch, label));
             result = super.emitForeignCall(hotspotLinkage, debugInfo, args);
-            append(new AArch64HotSpotCRuntimeCallEpilogueOp(config.threadLastJavaSpOffset(), config.threadLastJavaFpOffset(), thread));
+            append(new AArch64HotSpotCRuntimeCallEpilogueOp(config.threadLastJavaSpOffset(), config.threadLastJavaPcOffset(), thread, label));
 
             // Clear it out so it's not being reused later.
             label = null;
         } else {
             result = super.emitForeignCall(hotspotLinkage, debugInfo, args);
+        }
+
+        if (destroysRegisters) {
+            if (stub != null) {
+                if (stub.preservesRegisters()) {
+                    HotSpotLIRGenerationResult generationResult = getResult();
+                    LIRFrameState key = currentRuntimeCallInfo;
+                    if (key == null) {
+                        key = LIRFrameState.NO_STATE;
+                    }
+                    assert !generationResult.getCalleeSaveInfo().containsKey(key);
+                    generationResult.getCalleeSaveInfo().put(key, save);
+                    emitRestoreRegisters(save);
+                }
+            }
         }
 
         return result;
@@ -374,6 +451,19 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
         return emitConstantRetrieval(foreignCall, notes, constants, constantDescriptions, frameState);
     }
 
+    @Override
+    public Value emitResolveDynamicInvoke(Constant appendix, LIRFrameState frameState) {
+        AllocatableValue[] constantDescriptions = new AllocatableValue[0];
+        return emitConstantRetrieval(RESOLVE_DYNAMIC_INVOKE, INITIALIZE, appendix, constantDescriptions, frameState);
+    }
+
+    @Override
+    public Value emitLoadConfigValue(int markId, LIRKind kind) {
+        Variable result = newVariable(kind);
+        append(new AArch64HotSpotLoadConfigValueOp(markId, result));
+        return result;
+    }
+
     private Value emitConstantRetrieval(ForeignCallDescriptor foreignCall, HotSpotConstantLoadAction action, Constant constant, Value constantDescription, LIRFrameState frameState) {
         AllocatableValue[] constantDescriptions = new AllocatableValue[]{asAllocatable(constantDescription)};
         return emitConstantRetrieval(foreignCall, action, constant, constantDescriptions, frameState);
@@ -403,6 +493,12 @@ public class AArch64HotSpotLIRGenerator extends AArch64LIRGenerator implements H
     @Override
     public Value emitKlassInitializationAndRetrieval(Constant constant, Value constantDescription, LIRFrameState frameState) {
         return emitConstantRetrieval(INITIALIZE_KLASS_BY_SYMBOL, INITIALIZE, constant, constantDescription, frameState);
+    }
+
+    @Override
+    public Value emitResolveMethodAndLoadCounters(Constant method, Value klassHint, Value methodDescription, LIRFrameState frameState) {
+        AllocatableValue[] constantDescriptions = new AllocatableValue[]{asAllocatable(klassHint), asAllocatable(methodDescription)};
+        return emitConstantRetrieval(RESOLVE_METHOD_BY_SYMBOL_AND_LOAD_COUNTERS, LOAD_COUNTERS, method, constantDescriptions, frameState);
     }
 
     /**

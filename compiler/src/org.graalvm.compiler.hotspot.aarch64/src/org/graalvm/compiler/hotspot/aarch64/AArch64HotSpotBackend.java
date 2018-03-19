@@ -215,6 +215,10 @@ public class AArch64HotSpotBackend extends HotSpotHostBackend {
         return new AArch64MacroAssembler(getTarget());
     }
 
+    private Assembler createAssembler(FrameMap frameMap, boolean isImmutablePIC) {
+        return new AArch64MacroAssembler(getTarget(), isImmutablePIC);
+    }
+
     @Override
     public CompilationResultBuilder newCompilationResultBuilder(LIRGenerationResult lirGenRen, FrameMap frameMap, CompilationResult compilationResult, CompilationResultBuilderFactory factory) {
         HotSpotLIRGenerationResult gen = (HotSpotLIRGenerationResult) lirGenRen;
@@ -222,7 +226,7 @@ public class AArch64HotSpotBackend extends HotSpotHostBackend {
         assert gen.getDeoptimizationRescueSlot() == null || frameMap.frameNeedsAllocating() : "method that can deoptimize must have a frame";
 
         Stub stub = gen.getStub();
-        Assembler masm = createAssembler(frameMap);
+        Assembler masm = createAssembler(frameMap, compilationResult.isImmutablePIC());
         HotSpotFrameContext frameContext = new HotSpotFrameContext(stub != null);
 
         DataBuilder dataBuilder = new HotSpotDataBuilder(getCodeCache().getTarget());
@@ -269,7 +273,7 @@ public class AArch64HotSpotBackend extends HotSpotHostBackend {
             Register klass = r10;
             if (config.useCompressedClassPointers) {
                 masm.ldr(32, klass, klassAddress);
-                AArch64HotSpotMove.decodeKlassPointer(masm, klass, klass, providers.getRegisters().getHeapBaseRegister(), config.getKlassEncoding());
+                AArch64HotSpotMove.decodeKlassPointer(crb, masm, klass, klass, config.getKlassEncoding(), config);
             } else {
                 masm.ldr(64, klass, klassAddress);
             }

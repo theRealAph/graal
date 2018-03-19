@@ -54,7 +54,7 @@ public final class AArch64HotSpotLoadConfigValueOp extends AArch64LIRInstruction
         if (GeneratePIC.getValue(crb.getOptions())) {
             AArch64Kind kind = (AArch64Kind) result.getPlatformKind();
             Register reg = asRegister(result);
-            masm.adrp(reg, 0);
+            masm.adrp(reg);
             masm.add(64, reg, reg, 1);
             switch (kind) {
                 case BYTE:
@@ -72,6 +72,7 @@ public final class AArch64HotSpotLoadConfigValueOp extends AArch64LIRInstruction
                 default:
                     throw GraalError.unimplemented();
             }
+            masm.nop();
         } else {
             throw GraalError.unimplemented();
         }

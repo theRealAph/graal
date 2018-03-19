@@ -69,9 +69,7 @@ public final class AArch64HotSpotLoadAddressOp extends AArch64LIRInstruction {
         }
         if (crb.compilationResult.isImmutablePIC()) {
             Register dst = asRegister(result);
-            AArch64Address a = masm.getPlaceholder(-1);
-            masm.adrp(dst, 0);
-            masm.add(64, dst, dst, 1);
+            masm.addressOf(dst);
             masm.ldr(size, dst, AArch64Address.createBaseRegisterOnlyAddress(dst));
         } else {
             masm.ldr(size, asRegister(result), masm.getPlaceholder(-1));

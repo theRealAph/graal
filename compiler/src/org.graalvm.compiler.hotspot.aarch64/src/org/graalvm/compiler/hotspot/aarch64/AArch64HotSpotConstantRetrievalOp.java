@@ -106,7 +106,7 @@ public final class AArch64HotSpotConstantRetrievalOp extends AArch64LIRInstructi
         // metadata_adr
         for (int i = 0; i < constants.length; i++) {
             crb.recordInlineDataInCodeWithNote(constants[i], notes[i]);
-            masm.addressOf(asRegister(gotSlotOffsetParameters[i]), -1);
+            masm.addressOf(asRegister(gotSlotOffsetParameters[i]));
         }
 
         for (int i = 0; i < constantDescriptions.length; i++) {
