@@ -224,13 +224,6 @@ public class AArch64HotSpotMove {
     // masm.cmov(64, result, result, ARMv8.zr, ARMv8Assembler.ConditionFlag.NE);
     // }
 
-    public static void decodeKlassPointerZ(AArch64MacroAssembler masm, Register result, Register ptr, Register klassBase, CompressEncoding encoding) {
-        // result = klassBase + ptr << shift
-        if (encoding.hasShift() || encoding.hasBase()) {
-            masm.add(64, result, klassBase, ptr, AArch64Assembler.ExtendType.UXTX, encoding.getShift());
-        }
-    }
-
     public static void decodeKlassPointer(CompilationResultBuilder crb, AArch64MacroAssembler masm, Register result, Register ptr, CompressEncoding encoding, GraalHotSpotVMConfig config) {
         try (AArch64MacroAssembler.ScratchRegister sc = masm.getScratchRegister()) {
             Register scratch = sc.getRegister();
@@ -242,8 +235,8 @@ public class AArch64HotSpotMove {
                     masm.add(64, result, scratch, ptr, AArch64Assembler.ExtendType.UXTX, encoding.getShift());
                     crb.recordMark(config.MARKID_NARROW_KLASS_BASE_ADDRESS);
                 } else {
-                    masm.add(64, result, scratch, ptr, AArch64Assembler.ExtendType.UXTX, encoding.getShift());
                     masm.mov(scratch, encoding.getBase());
+                    masm.add(64, result, scratch, ptr, AArch64Assembler.ExtendType.UXTX, encoding.getShift());
                 }
             }
         }
