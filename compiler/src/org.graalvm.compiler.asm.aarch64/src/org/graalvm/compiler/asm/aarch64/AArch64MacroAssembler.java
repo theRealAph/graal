@@ -52,10 +52,6 @@ public class AArch64MacroAssembler extends AArch64Assembler {
     // Points to the next free scratch register
     private int nextFreeScratchRegister = 0;
 
-    public AArch64MacroAssembler(TargetDescription target, boolean isImmutablePIC) {
-        super(target);
-    }
-
     public AArch64MacroAssembler(TargetDescription target) {
         super(target);
     }
