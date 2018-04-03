@@ -160,14 +160,14 @@ public class AArch64IntegerArithmeticSnippets extends AbstractTemplates implemen
     private static void checkForZero(int y) {
         if (y == 0) {
             // "/ by zero"
-            DeoptimizeNode.deopt(DeoptimizationAction.None, DeoptimizationReason.ArithmeticException);
+            DeoptimizeNode.deopt(DeoptimizationAction.InvalidateReprofile, DeoptimizationReason.ArithmeticException);
         }
     }
 
     private static void checkForZero(long y) {
         if (y == 0) {
             // "/ by zero"
-            DeoptimizeNode.deopt(DeoptimizationAction.None, DeoptimizationReason.ArithmeticException);
+            DeoptimizeNode.deopt(DeoptimizationAction.InvalidateReprofile, DeoptimizationReason.ArithmeticException);
         }
     }
 
